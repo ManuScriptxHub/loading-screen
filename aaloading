@@ -1,598 +1,586 @@
-
--- Elysium Loader - Fixed Version (Will NOT crash)
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 
-local localPlayer = Players.LocalPlayer
-local loaderGui = nil
-local isLoaderVisible = false
-local rotatingElements = {}
-local stopAnimations = false
-
--- Utility functions
-local function createRoundedCorner(instance, radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius)
-    corner.Parent = instance
-    return corner
+local player = Players.LocalPlayer
+if not player then
+	return
 end
 
-local function createStroke(instance, color, thickness, transparency)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color
-    stroke.Thickness = thickness
-    stroke.Transparency = transparency or 0
-    stroke.Parent = instance
-    return stroke
+local MAGENTA = Color3.fromRGB(255, 43, 146)
+local CYAN = Color3.fromRGB(0, 255, 209)
+local TEXT = Color3.fromRGB(255, 255, 255)
+local MUTED = Color3.fromRGB(198, 192, 226)
+
+local HOLD = math.random(25, 35)
+local FADE = 0.75
+
+local function fontFace(family, weight)
+	local ok, font = pcall(function()
+		return Font.new(family, weight, Enum.FontStyle.Normal)
+	end)
+	if ok then
+		return font
+	end
+	return nil
 end
 
-local function createGradient(instance, colors, rotation)
-    local gradient = Instance.new("UIGradient")
-    local colorPoints = {}
-    
-    for i, colorData in ipairs(colors) do
-        table.insert(colorPoints, ColorSequenceKeypoint.new(colorData[1], colorData[2]))
-    end
-    
-    gradient.Color = ColorSequence.new(colorPoints)
-    gradient.Rotation = rotation or 0
-    gradient.Parent = instance
-    return gradient
+local fontBold = fontFace("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+local fontBody = fontFace("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium)
+local fontMono = fontFace("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium)
+
+local function new(className, props)
+	local inst = Instance.new(className)
+	local parentInst = props.Parent
+	for key, value in props do
+		if key ~= "Parent" then
+			inst[key] = value
+		end
+	end
+	if parentInst then
+		inst.Parent = parentInst
+	end
+	return inst
 end
 
--- UI Creation
-local function createLoaderUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ElysiumLoader"
-    screenGui.ResetOnSpawn = false
-    screenGui.IgnoreGuiInset = true
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.DisplayOrder = 99999999
-    screenGui.Parent = CoreGui
-    
-    local background = Instance.new("Frame")
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BackgroundColor3 = Color3.fromRGB(6, 4, 14)
-    background.BorderSizePixel = 0
-    background.BackgroundTransparency = 1
-    background.Parent = screenGui
-    
-    createGradient(background, {
-        {0, Color3.fromRGB(12, 8, 26)},
-        {1, Color3.fromRGB(4, 3, 9)}
-    }, 130)
-    
-    -- Animated Scanline
-    local scanline = Instance.new("Frame")
-    scanline.Size = UDim2.new(1, 0, 0, 1)
-    scanline.Position = UDim2.new(0, 0, 0, 0)
-    scanline.BackgroundColor3 = Color3.fromRGB(150, 90, 255)
-    scanline.BackgroundTransparency = 0.84
-    scanline.BorderSizePixel = 0
-    scanline.ZIndex = 2
-    scanline.Parent = background
-    
-    local dialogSize = UDim2.new(0, 480, 0, 340)
-    local dialogPosition = UDim2.new(0.5, 0, 0.5, 0)
-    
-    local dialog = Instance.new("Frame")
-    dialog.AnchorPoint = Vector2.new(0.5, 0.5)
-    dialog.Position = dialogPosition
-    dialog.Size = dialogSize
-    dialog.BackgroundColor3 = Color3.fromRGB(11, 8, 22)
-    dialog.BorderSizePixel = 0
-    dialog.ClipsDescendants = true
-    dialog.Visible = false
-    dialog.Parent = background
-    
-    createRoundedCorner(dialog, 16)
-    createStroke(dialog, Color3.fromRGB(110, 60, 210), 1, 0.4)
-    createGradient(dialog, {
-        {0, Color3.fromRGB(20, 14, 40)},
-        {1, Color3.fromRGB(8, 5, 18)}
-    }, 145)
-    
-    -- Top Accent Line
-    local accentLine = Instance.new("Frame")
-    accentLine.Size = UDim2.new(1, 0, 0, 2)
-    accentLine.BackgroundColor3 = Color3.fromRGB(160, 100, 255)
-    accentLine.BorderSizePixel = 0
-    accentLine.ZIndex = 3
-    accentLine.Parent = dialog
-    
-    createGradient(accentLine, {
-        {0, Color3.fromRGB(60, 30, 150)},
-        {0.5, Color3.fromRGB(195, 135, 255)},
-        {1, Color3.fromRGB(60, 30, 150)}
-    }, 0)
-    
-    -- Logo Container
-    local logoContainer = Instance.new("Frame")
-    logoContainer.Size = UDim2.new(0, 34, 0, 34)
-    logoContainer.Position = UDim2.new(0, 18, 0, 16)
-    logoContainer.BackgroundTransparency = 1
-    logoContainer.ZIndex = 3
-    logoContainer.Parent = dialog
-    
-    local logoOuter = Instance.new("Frame")
-    logoOuter.Size = UDim2.new(1, 0, 1, 0)
-    logoOuter.BackgroundTransparency = 1
-    logoOuter.ZIndex = 3
-    logoOuter.Parent = logoContainer
-    
-    createRoundedCorner(logoOuter, 34)
-    createStroke(logoOuter, Color3.fromRGB(185, 125, 255), 2.5, 0.05)
-    
-    local logoInner = Instance.new("Frame")
-    logoInner.Size = UDim2.new(0.54, 0, 0.54, 0)
-    logoInner.AnchorPoint = Vector2.new(0.5, 0.5)
-    logoInner.Position = UDim2.new(0.5, 0, 0.5, 0)
-    logoInner.BackgroundTransparency = 1
-    logoInner.ZIndex = 3
-    logoInner.Parent = logoContainer
-    
-    createRoundedCorner(logoInner, 34)
-    createStroke(logoInner, Color3.fromRGB(150, 90, 230), 1.5, 0.25)
-    
-    local logoLine = Instance.new("Frame")
-    logoLine.Size = UDim2.new(0, 50, 0, 2)
-    logoLine.AnchorPoint = Vector2.new(0.5, 0.5)
-    logoLine.Position = UDim2.new(0.5, 0, 0.5, 0)
-    logoLine.BackgroundColor3 = Color3.fromRGB(225, 195, 255)
-    logoLine.BorderSizePixel = 0
-    logoLine.Rotation = -22
-    logoLine.ZIndex = 4
-    logoLine.Parent = logoContainer
-    
-    createRoundedCorner(logoLine, 34)
-    
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(0, 155, 0, 22)
-    title.Position = UDim2.new(0, 60, 0, 16)
-    title.BackgroundTransparency = 1
-    title.Text = "ELYSIUM"
-    title.Font = Enum.Font.GothamBlack
-    title.TextSize = 19
-    title.TextColor3 = Color3.fromRGB(244, 236, 255)
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 3
-    title.Parent = dialog
-    
-    -- Version Badge
-    local versionBadge = Instance.new("Frame")
-    versionBadge.Size = UDim2.new(0, 122, 0, 14)
-    versionBadge.Position = UDim2.new(0, 60, 0, 40)
-    versionBadge.BackgroundColor3 = Color3.fromRGB(75, 38, 165)
-    versionBadge.BorderSizePixel = 0
-    versionBadge.ZIndex = 3
-    versionBadge.Parent = dialog
-    
-    createRoundedCorner(versionBadge, 4)
-    
-    local versionText = Instance.new("TextLabel")
-    versionText.Size = UDim2.new(1, 0, 1, 0)
-    versionText.BackgroundTransparency = 1
-    versionText.Text = "BYPASS ENGINE  v3.2"
-    versionText.Font = Enum.Font.GothamBold
-    versionText.TextSize = 9
-    versionText.TextColor3 = Color3.fromRGB(205, 178, 255)
-    versionText.ZIndex = 4
-    versionText.Parent = versionBadge
-    
-    -- Avatar Container
-    local avatarContainer = Instance.new("Frame")
-    avatarContainer.Size = UDim2.new(0, 68, 0, 68)
-    avatarContainer.AnchorPoint = Vector2.new(1, 0)
-    avatarContainer.Position = UDim2.new(1, -18, 0, 12)
-    avatarContainer.BackgroundTransparency = 1
-    avatarContainer.ZIndex = 3
-    avatarContainer.Parent = dialog
-    
-    local avatarBorder = Instance.new("Frame")
-    avatarBorder.Size = UDim2.new(1, 0, 1, 0)
-    avatarBorder.BackgroundTransparency = 1
-    avatarBorder.ZIndex = 3
-    avatarBorder.Parent = avatarContainer
-    
-    createRoundedCorner(avatarBorder, 34)
-    
-    local avatarStroke = createStroke(avatarBorder, Color3.fromRGB(210, 155, 255), 3, 0)
-    createGradient(avatarStroke, {
-        {0, Color3.fromRGB(210, 155, 255)},
-        {0.45, Color3.fromRGB(105, 50, 195)},
-        {1, Color3.fromRGB(45, 12, 100)}
-    }, 0)
-    
-    local avatarImage = Instance.new("ImageLabel")
-    avatarImage.Size = UDim2.new(0.76, 0, 0.76, 0)
-    avatarImage.AnchorPoint = Vector2.new(0.5, 0.5)
-    avatarImage.Position = UDim2.new(0.5, 0, 0.5, 0)
-    avatarImage.BackgroundColor3 = Color3.fromRGB(20, 13, 40)
-    avatarImage.ScaleType = Enum.ScaleType.Crop
-    avatarImage.ZIndex = 4
-    avatarImage.Parent = avatarContainer
-    
-    createRoundedCorner(avatarImage, 34)
-    
-    -- Load avatar
-    pcall(function()
-        local thumbnail = Players:GetUserThumbnailAsync(localPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
-        if thumbnail then
-            avatarImage.Image = thumbnail
-        end
-    end)
-    
-    -- Separator Line
-    local separator = Instance.new("Frame")
-    separator.Size = UDim2.new(1, -36, 0, 1)
-    separator.Position = UDim2.new(0, 18, 0, 62)
-    separator.BackgroundColor3 = Color3.fromRGB(50, 30, 90)
-    separator.BorderSizePixel = 0
-    separator.ZIndex = 3
-    separator.Parent = dialog
-    
-    -- Status Text
-    local statusText = Instance.new("TextLabel")
-    statusText.Size = UDim2.new(1, -110, 0, 18)
-    statusText.Position = UDim2.new(0, 18, 0, 71)
-    statusText.BackgroundTransparency = 1
-    statusText.Text = "Initializing bypass engine..."
-    statusText.Font = Enum.Font.GothamMedium
-    statusText.TextSize = 12
-    statusText.TextColor3 = Color3.fromRGB(160, 142, 200)
-    statusText.TextXAlignment = Enum.TextXAlignment.Left
-    statusText.ZIndex = 3
-    statusText.Parent = dialog
-    
-    -- Progress Percentage
-    local progressPercent = Instance.new("TextLabel")
-    progressPercent.Size = UDim2.new(0, 75, 0, 18)
-    progressPercent.AnchorPoint = Vector2.new(1, 0)
-    progressPercent.Position = UDim2.new(1, -18, 0, 71)
-    progressPercent.BackgroundTransparency = 1
-    progressPercent.Text = "0.0%"
-    progressPercent.Font = Enum.Font.GothamBold
-    progressPercent.TextSize = 13
-    progressPercent.TextColor3 = Color3.fromRGB(175, 118, 255)
-    progressPercent.TextXAlignment = Enum.TextXAlignment.Right
-    progressPercent.ZIndex = 3
-    progressPercent.Parent = dialog
-    
-    -- Progress Bar Container
-    local progressBarBg = Instance.new("Frame")
-    progressBarBg.Size = UDim2.new(1, -36, 0, 5)
-    progressBarBg.Position = UDim2.new(0, 18, 0, 93)
-    progressBarBg.BackgroundColor3 = Color3.fromRGB(22, 15, 44)
-    progressBarBg.BorderSizePixel = 0
-    progressBarBg.ZIndex = 3
-    progressBarBg.Parent = dialog
-    
-    createRoundedCorner(progressBarBg, 5)
-    
-    -- Progress Bar Fill
-    local progressBarFill = Instance.new("Frame")
-    progressBarFill.Size = UDim2.new(0, 0, 1, 0)
-    progressBarFill.BackgroundColor3 = Color3.fromRGB(148, 88, 252)
-    progressBarFill.BorderSizePixel = 0
-    progressBarFill.ZIndex = 4
-    progressBarFill.Parent = progressBarBg
-    
-    createRoundedCorner(progressBarFill, 5)
-    createGradient(progressBarFill, {
-        {0, Color3.fromRGB(95, 48, 205)},
-        {0.6, Color3.fromRGB(170, 108, 255)},
-        {1, Color3.fromRGB(218, 178, 255)}
-    }, 0)
-    
-    -- Log Scrolling Frame
-    local logFrame = Instance.new("ScrollingFrame")
-    logFrame.Size = UDim2.new(1, -36, 0, 148)
-    logFrame.Position = UDim2.new(0, 18, 0, 106)
-    logFrame.BackgroundColor3 = Color3.fromRGB(5, 3, 12)
-    logFrame.BorderSizePixel = 0
-    logFrame.ScrollBarThickness = 3
-    logFrame.ScrollBarImageColor3 = Color3.fromRGB(88, 48, 155)
-    logFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    logFrame.ZIndex = 3
-    logFrame.Parent = dialog
-    
-    createRoundedCorner(logFrame, 8)
-    createStroke(logFrame, Color3.fromRGB(50, 30, 88), 1, 0.4)
-    
-    local logLayout = Instance.new("UIListLayout")
-    logLayout.Padding = UDim.new(0, 1)
-    logLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    logLayout.Parent = logFrame
-    
-    local logPadding = Instance.new("UIPadding")
-    logPadding.PaddingLeft = UDim.new(0, 10)
-    logPadding.PaddingRight = UDim.new(0, 6)
-    logPadding.PaddingTop = UDim.new(0, 7)
-    logPadding.PaddingBottom = UDim.new(0, 7)
-    logPadding.Parent = logFrame
-    
-    -- Discord Banner
-    local discordBanner = Instance.new("Frame")
-    discordBanner.Size = UDim2.new(1, -36, 0, 40)
-    discordBanner.Position = UDim2.new(0, 18, 1, -52)
-    discordBanner.BackgroundColor3 = Color3.fromRGB(13, 9, 28)
-    discordBanner.BackgroundTransparency = 1
-    discordBanner.BorderSizePixel = 0
-    discordBanner.ZIndex = 3
-    discordBanner.Parent = dialog
-    
-    createRoundedCorner(discordBanner, 10)
-    
-    local discordStroke = createStroke(discordBanner, Color3.fromRGB(76, 45, 140), 1, 1)
-    
-    local discordIcon = Instance.new("TextLabel")
-    discordIcon.Size = UDim2.new(0, 20, 0, 20)
-    discordIcon.Position = UDim2.new(0, 10, 0.5, -10)
-    discordIcon.BackgroundTransparency = 1
-    discordIcon.Text = "🌐"
-    discordIcon.Font = Enum.Font.Gotham
-    discordIcon.TextSize = 14
-    discordIcon.TextColor3 = Color3.fromRGB(150, 120, 205)
-    discordIcon.TextTransparency = 1
-    discordIcon.ZIndex = 4
-    discordIcon.Parent = discordBanner
-    
-    local discordText = Instance.new("TextLabel")
-    discordText.Size = UDim2.new(0, 200, 1, 0)
-    discordText.Position = UDim2.new(0, 36, 0, 0)
-    discordText.BackgroundTransparency = 1
-    discordText.Text = "Join Elysium! discord.gg/3lysium"
-    discordText.Font = Enum.Font.GothamMedium
-    discordText.TextSize = 12
-    discordText.TextColor3 = Color3.fromRGB(170, 124, 255)
-    discordText.TextXAlignment = Enum.TextXAlignment.Left
-    discordText.TextTransparency = 1
-    discordText.ZIndex = 4
-    discordText.Parent = discordBanner
-    
-    local copyButton = Instance.new("TextButton")
-    copyButton.Size = UDim2.new(0, 60, 0, 24)
-    copyButton.AnchorPoint = Vector2.new(1, 0.5)
-    copyButton.Position = UDim2.new(1, -10, 0.5, 0)
-    copyButton.BackgroundColor3 = Color3.fromRGB(112, 62, 205)
-    copyButton.BackgroundTransparency = 1
-    copyButton.Text = "COPY"
-    copyButton.Font = Enum.Font.GothamBold
-    copyButton.TextSize = 11
-    copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copyButton.TextTransparency = 1
-    copyButton.BorderSizePixel = 0
-    copyButton.AutoButtonColor = false
-    copyButton.ZIndex = 4
-    copyButton.Parent = discordBanner
-    
-    createRoundedCorner(copyButton, 6)
-    
-    -- Button hover effects
-    copyButton.MouseEnter:Connect(function()
-        TweenService:Create(copyButton, TweenInfo.new(0.15), {
-            BackgroundColor3 = Color3.fromRGB(148, 92, 252)
-        }):Play()
-    end)
-    
-    copyButton.MouseLeave:Connect(function()
-        TweenService:Create(copyButton, TweenInfo.new(0.15), {
-            BackgroundColor3 = Color3.fromRGB(112, 62, 205)
-        }):Play()
-    end)
-    
-    copyButton.MouseButton1Click:Connect(function()
-        if setclipboard then
-            setclipboard("https://discord.gg/7prrWNjKyR")
-        end
-        copyButton.Text = "✓ COPIED"
-        task.delay(1.5, function()
-            if copyButton and copyButton.Parent then
-                copyButton.Text = "COPY"
-            end
-        end)
-    end)
-    
-    -- Show discord banner after delay
-    task.delay(math.random(150, 180), function()
-        local tweenInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        
-        TweenService:Create(discordBanner, tweenInfo, {BackgroundTransparency = 0}):Play()
-        TweenService:Create(discordStroke, tweenInfo, {Transparency = 0.42}):Play()
-        TweenService:Create(discordIcon, tweenInfo, {TextTransparency = 0}):Play()
-        TweenService:Create(discordText, tweenInfo, {TextTransparency = 0}):Play()
-        TweenService:Create(copyButton, tweenInfo, {
-            BackgroundTransparency = 0,
-            TextTransparency = 0
-        }):Play()
-    end)
-    
-    -- Animation functions
-    local logCounter = 0
-    local function addLogEntry(message, color)
-        logCounter = logCounter + 1
-        local logEntry = Instance.new("TextLabel")
-        logEntry.LayoutOrder = logCounter
-        logEntry.Size = UDim2.new(1, 0, 0, 16)
-        logEntry.BackgroundTransparency = 1
-        logEntry.Text = message
-        logEntry.Font = Enum.Font.Code
-        logEntry.TextSize = 11
-        logEntry.TextColor3 = color or Color3.fromRGB(145, 128, 188)
-        logEntry.TextXAlignment = Enum.TextXAlignment.Left
-        logEntry.ZIndex = 4
-        logEntry.Parent = logFrame
-        
-        task.defer(function()
-            if logFrame and logFrame.Parent then
-                logFrame.CanvasPosition = Vector2.new(0, logFrame.AbsoluteCanvasSize.Y)
-            end
-        end)
-    end
-    
-    -- Show UI with animation
-    local uiReady = false
-    task.defer(function()
-        RunService.RenderStepped:Wait()
-        dialog.Parent = background
-        dialog.Visible = true
-        dialog.Size = UDim2.new(0, 0, 0, 0)
-        
-        TweenService:Create(background, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 0
-        }):Play()
-        
-        TweenService:Create(dialog, TweenInfo.new(0.44, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-            Size = dialogSize,
-            Position = dialogPosition
-        }):Play()
-        
-        uiReady = true
-        isLoaderVisible = true
-    end)
-    
-    -- Rotation animation for avatar border
-    task.spawn(function()
-        while not stopAnimations do
-            task.wait(0.03)
-            if uiReady then
-                if avatarBorder then
-                    avatarBorder.Rotation = (avatarBorder.Rotation + 2) % 360
-                end
-                local gradient = avatarStroke:FindFirstChildOfClass("UIGradient")
-                if gradient then
-                    gradient.Rotation = (gradient.Rotation + 2) % 360
-                end
-            end
-        end
-    end)
-    
-    -- Animate scanline
-    task.spawn(function()
-        while not stopAnimations and screenGui and screenGui.Parent do
-            scanline.Position = UDim2.new(0, 0, -0.01, 0)
-            TweenService:Create(scanline, TweenInfo.new(4.5, Enum.EasingStyle.Linear), {
-                Position = UDim2.new(0, 0, 1.01, 0)
-            }):Play()
-            task.wait(4.5)
-        end
-    end)
-    
-    -- Progress simulation data
-    local logMessages = {
-        {pct = 0, msg = "> Enumerating anti-cheat modules...", color = Color3.fromRGB(136, 118, 184)},
-        {pct = 7, msg = "> Scanning memory map [0x0000 – 0xFFFF]...", color = Color3.fromRGB(136, 118, 184)},
-        {pct = 14, msg = "> Detected: Elysium AC build 2140 — intercepting...", color = Color3.fromRGB(212, 162, 255)},
-        {pct = 21, msg = "> Hook table relocated → 0xC0FFEE44", color = Color3.fromRGB(136, 118, 184)},
-        {pct = 29, msg = "> Signature spoof layer: ACTIVE", color = Color3.fromRGB(115, 245, 155)},
-        {pct = 36, msg = "> Restoring original opcode stream...", color = Color3.fromRGB(136, 118, 184)},
-        {pct = 44, msg = "> Injecting __newindex detour...", color = Color3.fromRGB(212, 162, 255)},
-        {pct = 52, msg = "> Integrity checksum cleared (0x00000000)", color = Color3.fromRGB(115, 245, 155)},
-        {pct = 60, msg = "> WARNING: heartbeat probe triggered — suppressing", color = Color3.fromRGB(255, 192, 85)},
-        {pct = 68, msg = "> Re-routing event dispatcher...", color = Color3.fromRGB(136, 118, 184)},
-        {pct = 76, msg = "> Spoof layer stable — monitor silent.", color = Color3.fromRGB(115, 245, 155)},
-        {pct = 84, msg = "> Finalizing payload delivery...", color = Color3.fromRGB(212, 162, 255)},
-        {pct = 92, msg = "> All modules bypassed. Loader armed.", color = Color3.fromRGB(115, 245, 155)}
-    }
-    
-    local statusMessages = {
-        {pct = 0, txt = "Initializing bypass engine..."},
-        {pct = 9, txt = "Mapping Script AC footprint..."},
-        {pct = 19, txt = "Patching hook table..."},
-        {pct = 31, txt = "Spoofing client signature..."},
-        {pct = 45, txt = "Restoring execution flow..."},
-        {pct = 58, txt = "Suppressing heartbeat probes..."},
-        {pct = 69, txt = "Applying detour patches..."},
-        {pct = 80, txt = "Clearing integrity checksums..."},
-        {pct = 89, txt = "Finalizing environment..."},
-        {pct = 95, txt = "Loader ready — standing by."}
-    }
-    
-    local maxProgress = 100
-    local currentProgress = 0
-    local loggedPcts = {}
-    local lastStatusPct = -1
-    
-    local startTime = os.clock()
-    local rampUpDuration = 8
-    local rampDownDuration = 12
-    
-    local function getTargetProgress()
-        local elapsed = math.clamp((os.clock() - startTime) / (rampUpDuration + rampDownDuration), 0, 1)
-        return maxProgress * elapsed
-    end
-    
-    -- Progress animation
-    task.spawn(function()
-        while not stopAnimations do
-            local target = getTargetProgress()
-            currentProgress = math.clamp(target, 0, maxProgress)
-            
-            if currentProgress >= maxProgress then
-                currentProgress = maxProgress
-                progressPercent.Text = "100.0%"
-                
-                TweenService:Create(progressBarFill, TweenInfo.new(0.4, Enum.EasingStyle.Sine), {
-                    Size = UDim2.new(1, 0, 1, 0)
-                }):Play()
-                
-                statusText.Text = "Loader ready — standing by."
-                addLogEntry("> Loader ready. Waiting for game signal...", Color3.fromRGB(115, 245, 155))
-                break
-            end
-            
-            progressPercent.Text = string.format("%.1f", currentProgress) .. "%"
-            
-            TweenService:Create(progressBarFill, TweenInfo.new(0.28, Enum.EasingStyle.Sine), {
-                Size = UDim2.new(currentProgress / 100, 0, 1, 0)
-            }):Play()
-            
-            -- Update status text
-            for i = #statusMessages, 1, -1 do
-                local msg = statusMessages[i]
-                if currentProgress >= msg.pct and msg.pct > lastStatusPct then
-                    lastStatusPct = msg.pct
-                    statusText.Text = msg.txt
-                    break
-                end
-            end
-            
-            -- Add log messages
-            for _, msg in ipairs(logMessages) do
-                if currentProgress >= msg.pct and not loggedPcts[msg.pct] then
-                    loggedPcts[msg.pct] = true
-                    addLogEntry(msg.msg, msg.color)
-                end
-            end
-            
-            task.wait(0.1)
-        end
-    end)
-    
-    return screenGui
+local function hiddenParent()
+	local ok, ui = pcall(function()
+		if type(gethui) == "function" then
+			return gethui()
+		end
+		return nil
+	end)
+	if ok and typeof(ui) == "Instance" then
+		return ui
+	end
+	return player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 8)
 end
 
--- Disable CoreGui and cleanup existing loader
+local parent = hiddenParent()
+if not parent then
+	warn("[ScriptLoader] no GUI parent")
+	return
+end
+
+local previous = parent:FindFirstChild("CyberFunkLoader")
+if previous then
+	previous:Destroy()
+end
+
+local gui = new("ScreenGui", {
+	Name = "ScriptLoader",
+	IgnoreGuiInset = true,
+	ResetOnSpawn = false,
+	DisplayOrder = 100000,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = parent,
+})
 pcall(function()
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+	gui.ScreenInsets = Enum.ScreenInsets.None
+end)
+pcall(function()
+	gui.ClipToDeviceSafeArea = false
 end)
 
-pcall(function()
-    local existingLoader = CoreGui:FindFirstChild("ElysiumLoader")
-    if existingLoader then
-        existingLoader:Destroy()
-    end
-end)
+local closing = false
+local function still()
+	if closing or gui.Parent == nil then
+		return false
+	end
+	if type(STATE) == "table" and type(STATE.alive) == "function" then
+		return STATE.alive()
+	end
+	return true
+end
 
--- Initialize loader
-loaderGui = createLoaderUI()
+if type(STATE) == "table" and type(STATE.onCleanup) == "function" then
+	STATE.onCleanup(function()
+		closing = true
+		if gui.Parent then
+			gui:Destroy()
+		end
+	end)
+end
 
--- Keep loader alive (never ends, just stays visible)
-while loaderGui and loaderGui.Parent do
-    task.wait(1)
+local built, buildErr = xpcall(function()
+	local fades = {}
+	local function track(obj, prop, resting)
+		fades[#fades + 1] = { obj, prop, resting }
+		obj[prop] = 1
+	end
+
+	local function applyFade(alpha)
+		local amount = math.clamp(alpha, 0, 1)
+		for _, item in fades do
+			local obj = item[1]
+			if obj.Parent ~= nil then
+				obj[item[2]] = 1 - amount * (1 - item[3])
+			end
+		end
+	end
+
+	local root = new("Frame", {
+		Name = "Root",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Parent = gui,
+	})
+
+	local dim = new("Frame", {
+		Name = "Dim",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(2, 0, 8),
+		BorderSizePixel = 0,
+		Active = true,
+		Selectable = false,
+		ZIndex = 1,
+		Parent = root,
+	})
+	track(dim, "BackgroundTransparency", 0.28)
+
+	local camera = workspace.CurrentCamera
+	local view = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+	local step = 88
+	for y = step, view.Y - step, step do
+		local line = new("Frame", {
+			Size = UDim2.new(1, 0, 0, 1),
+			Position = UDim2.fromOffset(0, y),
+			BackgroundColor3 = CYAN,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+			Parent = root,
+		})
+		track(line, "BackgroundTransparency", 0.9)
+	end
+
+	local cornerSpots = {
+		{ UDim2.fromOffset(28, 36), Vector2.new(0, 0) },
+		{ UDim2.new(1, -28, 0, 36), Vector2.new(1, 0) },
+		{ UDim2.new(0, 28, 1, -36), Vector2.new(0, 1) },
+		{ UDim2.new(1, -28, 1, -36), Vector2.new(1, 1) },
+	}
+	for _, spot in cornerSpots do
+		local horizontal = new("Frame", {
+			AnchorPoint = spot[2],
+			Position = spot[1],
+			Size = UDim2.fromOffset(42, 2),
+			BackgroundColor3 = CYAN,
+			BorderSizePixel = 0,
+			ZIndex = 6,
+			Parent = root,
+		})
+		local vertical = new("Frame", {
+			AnchorPoint = spot[2],
+			Position = spot[1],
+			Size = UDim2.fromOffset(2, 42),
+			BackgroundColor3 = MAGENTA,
+			BorderSizePixel = 0,
+			ZIndex = 6,
+			Parent = root,
+		})
+		track(horizontal, "BackgroundTransparency", 0)
+		track(vertical, "BackgroundTransparency", 0)
+	end
+
+	local scan = new("Frame", {
+		Name = "Scan",
+		Size = UDim2.new(1, 0, 0, 72),
+		Position = UDim2.fromScale(0, -0.2),
+		BackgroundColor3 = MAGENTA,
+		BorderSizePixel = 0,
+		ZIndex = 4,
+		Parent = root,
+	})
+	new("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.5, 0.35),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+		Parent = scan,
+	})
+	track(scan, "BackgroundTransparency", 0.55)
+
+	local card = new("Frame", {
+		Name = "Card",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 16),
+		Size = UDim2.fromOffset(680, 360),
+		BackgroundColor3 = Color3.fromRGB(7, 6, 14),
+		BorderSizePixel = 0,
+		ZIndex = 7,
+		Parent = root,
+	})
+	new("UICorner", { CornerRadius = UDim.new(0, 16), Parent = card })
+	new("UIGradient", {
+		Rotation = 118,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 10, 32)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 14, 20)),
+		}),
+		Parent = card,
+	})
+	track(card, "BackgroundTransparency", 0)
+
+	local stroke = new("UIStroke", {
+		Thickness = 2,
+		Color = Color3.new(1, 1, 1),
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		BorderStrokePosition = Enum.BorderStrokePosition.Center,
+		Parent = card,
+	})
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, MAGENTA),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(168, 86, 255)),
+			ColorSequenceKeypoint.new(1, CYAN),
+		}),
+		Parent = stroke,
+	})
+	track(stroke, "Transparency", 0)
+
+	local accent = new("Frame", {
+		Name = "Accent",
+		Size = UDim2.new(1, 0, 0, 3),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+	new("UIGradient", { Color = ColorSequence.new(MAGENTA, CYAN), Parent = accent })
+	track(accent, "BackgroundTransparency", 0)
+
+	local function label(props, kind, resting)
+		local face = kind == "bold" and fontBold or kind == "mono" and fontMono or fontBody
+		if face then
+			props.FontFace = face
+		else
+			props.Font = kind == "bold" and Enum.Font.GothamBold or kind == "mono" and Enum.Font.Code or Enum.Font.Gotham
+		end
+		props.BackgroundTransparency = 1
+		props.BorderSizePixel = 0
+		props.TextScaled = false
+		props.RichText = false
+		props.TextColor3 = props.TextColor3 or TEXT
+		props.TextXAlignment = props.TextXAlignment or Enum.TextXAlignment.Left
+		props.TextTruncate = Enum.TextTruncate.AtEnd
+		props.ZIndex = props.ZIndex or 8
+		local inst = new("TextLabel", props)
+		track(inst, "TextTransparency", resting or 0)
+		return inst
+	end
+
+	label({
+		Name = "Kicker",
+		Position = UDim2.fromOffset(28, 22),
+		Size = UDim2.new(1, -56, 0, 18),
+		TextSize = 15,
+		TextColor3 = CYAN,
+		Text = string.format("UPLINK  //  %ds", HOLD),
+		Parent = card,
+	}, "mono")
+
+	local titleRow = new("Frame", {
+		Name = "TitleRow",
+		Position = UDim2.fromOffset(28, 44),
+		Size = UDim2.new(1, -176, 0, 52),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = titleRow,
+	})
+	label({
+		Name = "Cyber",
+		LayoutOrder = 1,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 52),
+		TextSize = 44,
+		Text = "CYBER",
+		Parent = titleRow,
+	}, "bold")
+	label({
+		Name = "Funk",
+		LayoutOrder = 2,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 52),
+		TextSize = 44,
+		TextColor3 = MAGENTA,
+		Text = "FUNK",
+		Parent = titleRow,
+	}, "bold")
+
+	local status = label({
+		Name = "Status",
+		Position = UDim2.fromOffset(28, 104),
+		Size = UDim2.new(1, -56, 0, 22),
+		TextSize = 16,
+		TextColor3 = MUTED,
+		Text = "TUNING THE FUNK BUS",
+		Parent = card,
+	}, "body")
+
+	local eq = new("Frame", {
+		Name = "Eq",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -28, 0, 70),
+		Size = UDim2.fromOffset(120, 32),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+
+	local bars = {}
+	for i = 1, 7 do
+		local bar = new("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, (i - 1) * 16, 1, 0),
+			Size = UDim2.fromOffset(8, 12),
+			BackgroundColor3 = (i % 2 == 0) and CYAN or MAGENTA,
+			BorderSizePixel = 0,
+			ZIndex = 8,
+			Parent = eq,
+		})
+		new("UICorner", { CornerRadius = UDim.new(0, 2), Parent = bar })
+		track(bar, "BackgroundTransparency", 0)
+		bars[i] = bar
+	end
+
+	local trackBar = new("Frame", {
+		Name = "Track",
+		Position = UDim2.fromOffset(28, 142),
+		Size = UDim2.new(1, -56, 0, 10),
+		BackgroundColor3 = Color3.fromRGB(54, 40, 84),
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = trackBar })
+	track(trackBar, "BackgroundTransparency", 0)
+
+	local fill = new("Frame", {
+		Name = "Fill",
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 9,
+		Parent = trackBar,
+	})
+	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = fill })
+	new("UIGradient", { Color = ColorSequence.new(MAGENTA, CYAN), Parent = fill })
+	track(fill, "BackgroundTransparency", 0)
+
+	local percent = label({
+		Name = "Percent",
+		Position = UDim2.fromOffset(28, 162),
+		Size = UDim2.new(0.5, -28, 0, 20),
+		TextSize = 15,
+		Text = "00%",
+		Parent = card,
+	}, "mono")
+
+	local clock = label({
+		Name = "Clock",
+		Position = UDim2.new(0.5, 0, 0, 162),
+		Size = UDim2.new(0.5, -28, 0, 20),
+		TextSize = 15,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Text = string.format("00:%02d", HOLD),
+		Parent = card,
+	}, "mono")
+
+	local rule = new("Frame", {
+		Position = UDim2.fromOffset(28, 196),
+		Size = UDim2.new(1, -56, 0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+	track(rule, "BackgroundTransparency", 0.82)
+
+	local profile = new("Frame", {
+		Name = "Profile",
+		Position = UDim2.fromOffset(20, 214),
+		Size = UDim2.new(1, -40, 0, 122),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = card,
+	})
+	new("UICorner", { CornerRadius = UDim.new(0, 12), Parent = profile })
+	track(profile, "BackgroundTransparency", 0.94)
+
+	local avatar = new("ImageLabel", {
+		Name = "Avatar",
+		Position = UDim2.fromOffset(20, 22),
+		Size = UDim2.fromOffset(78, 78),
+		BackgroundColor3 = Color3.fromRGB(20, 12, 32),
+		BorderSizePixel = 0,
+		Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=420&h=420", player.UserId),
+		ScaleType = Enum.ScaleType.Crop,
+		ResampleMode = Enum.ResamplerMode.Default,
+		ZIndex = 9,
+		Parent = profile,
+	})
+	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = avatar })
+	track(avatar, "ImageTransparency", 0)
+	local avatarStroke = new("UIStroke", {
+		Thickness = 2,
+		Color = CYAN,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = avatar,
+	})
+	track(avatarStroke, "Transparency", 0)
+
+	local displayName = player.DisplayName
+	if displayName == "" then
+		displayName = player.Name
+	end
+
+	label({
+		Position = UDim2.fromOffset(116, 24),
+		Size = UDim2.new(1, -136, 0, 16),
+		TextSize = 13,
+		TextColor3 = MAGENTA,
+		Text = "OPERATOR",
+		Parent = profile,
+	}, "mono")
+	label({
+		Position = UDim2.fromOffset(116, 44),
+		Size = UDim2.new(1, -136, 0, 28),
+		TextSize = 24,
+		Text = displayName,
+		Parent = profile,
+	}, "bold")
+	label({
+		Position = UDim2.fromOffset(116, 76),
+		Size = UDim2.new(1, -136, 0, 20),
+		TextSize = 15,
+		TextColor3 = CYAN,
+		Text = "@" .. player.Name,
+		Parent = profile,
+	}, "mono")
+
+	local phases = {
+		{ 0.00, "TUNING THE FUNK BUS" },
+		{ 0.16, "SYNCING OPERATOR" },
+		{ 0.38, "CHARGING NEON CORE" },
+		{ 0.58, "DECRYPTING MODULES" },
+		{ 0.78, "LOCKING SIGNAL" },
+		{ 0.94, "FUNK ONLINE" },
+	}
+
+	local progress = new("NumberValue", {
+		Name = "Progress",
+		Value = 0,
+		Parent = gui,
+	})
+	progress.Changed:Connect(function(value)
+		if fill.Parent == nil then
+			return
+		end
+		local alpha = math.clamp(value, 0, 1)
+		fill.Size = UDim2.fromScale(alpha, 1)
+		percent.Text = string.format("%02d%%", math.floor(alpha * 100 + 0.5))
+		local line = phases[1][2]
+		for _, phase in phases do
+			if alpha >= phase[1] then
+				line = phase[2]
+			end
+		end
+		status.Text = line
+	end)
+
+	local reveal = new("NumberValue", {
+		Name = "Reveal",
+		Value = 0,
+		Parent = gui,
+	})
+	applyFade(0)
+	reveal.Changed:Connect(applyFade)
+
+	local started = os.clock()
+	TweenService:Create(reveal, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Value = 1,
+	}):Play()
+	TweenService:Create(card, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+	}):Play()
+	TweenService:Create(progress, TweenInfo.new(HOLD, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Value = 1,
+	}):Play()
+
+	local function guard(fn)
+		task.spawn(function()
+			local ok, err = pcall(fn)
+			if not ok then
+				warn("[CyberFunkLoader] " .. tostring(err))
+			end
+		end)
+	end
+
+	guard(function()
+		while still() do
+			local left = math.max(0, HOLD - (os.clock() - started))
+			clock.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
+			task.wait(0.1)
+		end
+	end)
+
+	guard(function()
+		while still() do
+			for _, bar in bars do
+				if bar.Parent then
+					TweenService:Create(bar, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						Size = UDim2.fromOffset(8, math.random(8, 30)),
+					}):Play()
+				end
+			end
+			task.wait(0.28)
+		end
+	end)
+
+	guard(function()
+		while still() do
+			scan.Position = UDim2.fromScale(0, -0.2)
+			local sweep = TweenService:Create(scan, TweenInfo.new(2.8, Enum.EasingStyle.Linear), {
+				Position = UDim2.fromScale(0, 1.05),
+			})
+			sweep:Play()
+			sweep.Completed:Wait()
+		end
+	end)
+
+	task.delay(math.max(0.2, HOLD - FADE), function()
+		if not still() then
+			return
+		end
+		closing = true
+		local out = TweenService:Create(reveal, TweenInfo.new(FADE, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Value = 0,
+		})
+		out.Completed:Connect(function()
+			if gui.Parent then
+				gui:Destroy()
+			end
+		end)
+		out:Play()
+	end)
+end, debug.traceback)
+
+if not built then
+	warn("[CyberFunkLoader] " .. tostring(buildErr))
+	if gui.Parent then
+		gui:Destroy()
+	end
 end
