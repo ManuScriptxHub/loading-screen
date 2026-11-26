@@ -61,7 +61,7 @@ if not parent then
 	return
 end
 
-local previous = parent:FindFirstChild("CyberFunkLoader")
+local previous = parent:FindFirstChild("ScriptLoader")
 if previous then
 	previous:Destroy()
 end
@@ -277,7 +277,7 @@ local built, buildErr = xpcall(function()
 		Size = UDim2.new(1, -56, 0, 18),
 		TextSize = 15,
 		TextColor3 = CYAN,
-		Text = string.format("UPLINK  //  %ds", HOLD),
+		Text = string.format("SCRIPT LOADER  //  %ds", HOLD),
 		Parent = card,
 	}, "mono")
 
@@ -298,22 +298,22 @@ local built, buildErr = xpcall(function()
 		Parent = titleRow,
 	})
 	label({
-		Name = "Cyber",
+		Name = "Vesper",
 		LayoutOrder = 1,
 		AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.fromOffset(0, 52),
 		TextSize = 44,
-		Text = "CYBER",
+		Text = "VESPER",
 		Parent = titleRow,
 	}, "bold")
 	label({
-		Name = "Funk",
+		Name = "Hub",
 		LayoutOrder = 2,
 		AutomaticSize = Enum.AutomaticSize.X,
 		Size = UDim2.fromOffset(0, 52),
 		TextSize = 44,
 		TextColor3 = MAGENTA,
-		Text = "FUNK",
+		Text = "HUB",
 		Parent = titleRow,
 	}, "bold")
 
@@ -323,7 +323,7 @@ local built, buildErr = xpcall(function()
 		Size = UDim2.new(1, -56, 0, 22),
 		TextSize = 16,
 		TextColor3 = MUTED,
-		Text = "TUNING THE FUNK BUS",
+		Text = "INITIALIZING LOADER",
 		Parent = card,
 	}, "body")
 
@@ -472,12 +472,12 @@ local built, buildErr = xpcall(function()
 	}, "mono")
 
 	local phases = {
-		{ 0.00, "TUNING THE FUNK BUS" },
+		{ 0.00, "INITIALIZING LOADER" },
 		{ 0.16, "SYNCING OPERATOR" },
 		{ 0.38, "CHARGING NEON CORE" },
 		{ 0.58, "DECRYPTING MODULES" },
 		{ 0.78, "LOCKING SIGNAL" },
-		{ 0.94, "FUNK ONLINE" },
+		{ 0.94, "VESPERHUB ONLINE" },
 	}
 
 	local progress = new("NumberValue", {
@@ -524,7 +524,7 @@ local built, buildErr = xpcall(function()
 		task.spawn(function()
 			local ok, err = pcall(fn)
 			if not ok then
-				warn("[CyberFunkLoader] " .. tostring(err))
+				warn("[ScriptLoader] " .. tostring(err))
 			end
 		end)
 	end
@@ -579,7 +579,7 @@ local built, buildErr = xpcall(function()
 end, debug.traceback)
 
 if not built then
-	warn("[CyberFunkLoader] " .. tostring(buildErr))
+	warn("[ScriptLoader] " .. tostring(buildErr))
 	if gui.Parent then
 		gui:Destroy()
 	end
