@@ -1,586 +1,345 @@
+-- Duality loading screen. Stays up for 40 seconds, then fades out.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local DURATION = 40
+local WORD = "SCRIPT LOADER"
+local SUB = "P L E A S E  W A I T .   L O A D I N G D A T A ."
+
+local B64 = [[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]]
 
 local player = Players.LocalPlayer
-if not player then
-	return
-end
-
-local MAGENTA = Color3.fromRGB(255, 43, 146)
-local CYAN = Color3.fromRGB(0, 255, 209)
-local TEXT = Color3.fromRGB(255, 255, 255)
-local MUTED = Color3.fromRGB(198, 192, 226)
-
-local HOLD = math.random(25, 35)
-local FADE = 0.75
-
-local function fontFace(family, weight)
-	local ok, font = pcall(function()
-		return Font.new(family, weight, Enum.FontStyle.Normal)
-	end)
-	if ok then
-		return font
-	end
-	return nil
-end
-
-local fontBold = fontFace("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
-local fontBody = fontFace("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium)
-local fontMono = fontFace("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium)
-
-local function new(className, props)
-	local inst = Instance.new(className)
-	local parentInst = props.Parent
-	for key, value in props do
-		if key ~= "Parent" then
-			inst[key] = value
-		end
-	end
-	if parentInst then
-		inst.Parent = parentInst
-	end
-	return inst
-end
-
-local function hiddenParent()
-	local ok, ui = pcall(function()
-		if type(gethui) == "function" then
-			return gethui()
-		end
-		return nil
-	end)
-	if ok and typeof(ui) == "Instance" then
-		return ui
-	end
-	return player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", 8)
-end
-
-local parent = hiddenParent()
+local parent = nil
+pcall(function()
+	parent = gethui()
+end)
 if not parent then
-	warn("[ScriptLoader] no GUI parent")
-	return
+	parent = player:WaitForChild("PlayerGui")
 end
 
-local previous = parent:FindFirstChild("ScriptLoader")
-if previous then
-	previous:Destroy()
+local old = parent:FindFirstChild("DualityLoading")
+if old then
+	old:Destroy()
 end
 
-local gui = new("ScreenGui", {
-	Name = "ScriptLoader",
-	IgnoreGuiInset = true,
-	ResetOnSpawn = false,
-	DisplayOrder = 100000,
-	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-	Parent = parent,
-})
-pcall(function()
-	gui.ScreenInsets = Enum.ScreenInsets.None
-end)
-pcall(function()
-	gui.ClipToDeviceSafeArea = false
-end)
+local gui = Instance.new("ScreenGui")
+gui.Name = "DualityLoading"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 100000
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = parent
 
-local closing = false
-local function still()
-	if closing or gui.Parent == nil then
-		return false
-	end
-	if type(STATE) == "table" and type(STATE.alive) == "function" then
-		return STATE.alive()
-	end
-	return true
-end
-
-if type(STATE) == "table" and type(STATE.onCleanup) == "function" then
+if typeof(STATE) == "table" and typeof(STATE.onCleanup) == "function" then
 	STATE.onCleanup(function()
-		closing = true
 		if gui.Parent then
 			gui:Destroy()
 		end
 	end)
 end
 
-local built, buildErr = xpcall(function()
-	local fades = {}
-	local function track(obj, prop, resting)
-		fades[#fades + 1] = { obj, prop, resting }
-		obj[prop] = 1
-	end
+local function alive()
+	return gui.Parent ~= nil
+end
 
-	local function applyFade(alpha)
-		local amount = math.clamp(alpha, 0, 1)
-		for _, item in fades do
-			local obj = item[1]
-			if obj.Parent ~= nil then
-				obj[item[2]] = 1 - amount * (1 - item[3])
-			end
-		end
-	end
+local root = Instance.new("Frame")
+root.Name = "Backdrop"
+root.Size = UDim2.fromScale(1, 1)
+root.BackgroundColor3 = Color3.new(0, 0, 0)
+root.BackgroundTransparency = 0.7   -- add this line
+root.BorderSizePixel = 0
+root.Active = true
+root.Parent = gui
 
-	local root = new("Frame", {
-		Name = "Root",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Parent = gui,
-	})
-
-	local dim = new("Frame", {
-		Name = "Dim",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(2, 0, 8),
-		BorderSizePixel = 0,
-		Active = true,
-		Selectable = false,
-		ZIndex = 1,
-		Parent = root,
-	})
-	track(dim, "BackgroundTransparency", 0.28)
-
-	local camera = workspace.CurrentCamera
-	local view = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-	local step = 88
-	for y = step, view.Y - step, step do
-		local line = new("Frame", {
-			Size = UDim2.new(1, 0, 0, 1),
-			Position = UDim2.fromOffset(0, y),
-			BackgroundColor3 = CYAN,
-			BorderSizePixel = 0,
-			ZIndex = 2,
-			Parent = root,
-		})
-		track(line, "BackgroundTransparency", 0.9)
-	end
-
-	local cornerSpots = {
-		{ UDim2.fromOffset(28, 36), Vector2.new(0, 0) },
-		{ UDim2.new(1, -28, 0, 36), Vector2.new(1, 0) },
-		{ UDim2.new(0, 28, 1, -36), Vector2.new(0, 1) },
-		{ UDim2.new(1, -28, 1, -36), Vector2.new(1, 1) },
-	}
-	for _, spot in cornerSpots do
-		local horizontal = new("Frame", {
-			AnchorPoint = spot[2],
-			Position = spot[1],
-			Size = UDim2.fromOffset(42, 2),
-			BackgroundColor3 = CYAN,
-			BorderSizePixel = 0,
-			ZIndex = 6,
-			Parent = root,
-		})
-		local vertical = new("Frame", {
-			AnchorPoint = spot[2],
-			Position = spot[1],
-			Size = UDim2.fromOffset(2, 42),
-			BackgroundColor3 = MAGENTA,
-			BorderSizePixel = 0,
-			ZIndex = 6,
-			Parent = root,
-		})
-		track(horizontal, "BackgroundTransparency", 0)
-		track(vertical, "BackgroundTransparency", 0)
-	end
-
-	local scan = new("Frame", {
-		Name = "Scan",
-		Size = UDim2.new(1, 0, 0, 72),
-		Position = UDim2.fromScale(0, -0.2),
-		BackgroundColor3 = MAGENTA,
-		BorderSizePixel = 0,
-		ZIndex = 4,
-		Parent = root,
-	})
-	new("UIGradient", {
-		Rotation = 90,
-		Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.5, 0.35),
-			NumberSequenceKeypoint.new(1, 1),
-		}),
-		Parent = scan,
-	})
-	track(scan, "BackgroundTransparency", 0.55)
-
-	local card = new("Frame", {
-		Name = "Card",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 16),
-		Size = UDim2.fromOffset(680, 360),
-		BackgroundColor3 = Color3.fromRGB(7, 6, 14),
-		BorderSizePixel = 0,
-		ZIndex = 7,
-		Parent = root,
-	})
-	new("UICorner", { CornerRadius = UDim.new(0, 16), Parent = card })
-	new("UIGradient", {
-		Rotation = 118,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 10, 32)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 14, 20)),
-		}),
-		Parent = card,
-	})
-	track(card, "BackgroundTransparency", 0)
-
-	local stroke = new("UIStroke", {
-		Thickness = 2,
-		Color = Color3.new(1, 1, 1),
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		BorderStrokePosition = Enum.BorderStrokePosition.Center,
-		Parent = card,
-	})
-	new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, MAGENTA),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(168, 86, 255)),
-			ColorSequenceKeypoint.new(1, CYAN),
-		}),
-		Parent = stroke,
-	})
-	track(stroke, "Transparency", 0)
-
-	local accent = new("Frame", {
-		Name = "Accent",
-		Size = UDim2.new(1, 0, 0, 3),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-	new("UIGradient", { Color = ColorSequence.new(MAGENTA, CYAN), Parent = accent })
-	track(accent, "BackgroundTransparency", 0)
-
-	local function label(props, kind, resting)
-		local face = kind == "bold" and fontBold or kind == "mono" and fontMono or fontBody
-		if face then
-			props.FontFace = face
-		else
-			props.Font = kind == "bold" and Enum.Font.GothamBold or kind == "mono" and Enum.Font.Code or Enum.Font.Gotham
-		end
-		props.BackgroundTransparency = 1
-		props.BorderSizePixel = 0
-		props.TextScaled = false
-		props.RichText = false
-		props.TextColor3 = props.TextColor3 or TEXT
-		props.TextXAlignment = props.TextXAlignment or Enum.TextXAlignment.Left
-		props.TextTruncate = Enum.TextTruncate.AtEnd
-		props.ZIndex = props.ZIndex or 8
-		local inst = new("TextLabel", props)
-		track(inst, "TextTransparency", resting or 0)
-		return inst
-	end
-
-	label({
-		Name = "Kicker",
-		Position = UDim2.fromOffset(28, 22),
-		Size = UDim2.new(1, -56, 0, 18),
-		TextSize = 15,
-		TextColor3 = CYAN,
-		Text = string.format("SCRIPT LOADER  //  %ds", HOLD),
-		Parent = card,
-	}, "mono")
-
-	local titleRow = new("Frame", {
-		Name = "TitleRow",
-		Position = UDim2.fromOffset(28, 44),
-		Size = UDim2.new(1, -176, 0, 52),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-	new("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		VerticalAlignment = Enum.VerticalAlignment.Center,
-		Padding = UDim.new(0, 12),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = titleRow,
-	})
-	label({
-		Name = "Vesper",
-		LayoutOrder = 1,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 52),
-		TextSize = 44,
-		Text = "VESPER",
-		Parent = titleRow,
-	}, "bold")
-	label({
-		Name = "Hub",
-		LayoutOrder = 2,
-		AutomaticSize = Enum.AutomaticSize.X,
-		Size = UDim2.fromOffset(0, 52),
-		TextSize = 44,
-		TextColor3 = MAGENTA,
-		Text = "HUB",
-		Parent = titleRow,
-	}, "bold")
-
-	local status = label({
-		Name = "Status",
-		Position = UDim2.fromOffset(28, 104),
-		Size = UDim2.new(1, -56, 0, 22),
-		TextSize = 16,
-		TextColor3 = MUTED,
-		Text = "INITIALIZING LOADER",
-		Parent = card,
-	}, "body")
-
-	local eq = new("Frame", {
-		Name = "Eq",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -28, 0, 70),
-		Size = UDim2.fromOffset(120, 32),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-
-	local bars = {}
-	for i = 1, 7 do
-		local bar = new("Frame", {
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, (i - 1) * 16, 1, 0),
-			Size = UDim2.fromOffset(8, 12),
-			BackgroundColor3 = (i % 2 == 0) and CYAN or MAGENTA,
-			BorderSizePixel = 0,
-			ZIndex = 8,
-			Parent = eq,
-		})
-		new("UICorner", { CornerRadius = UDim.new(0, 2), Parent = bar })
-		track(bar, "BackgroundTransparency", 0)
-		bars[i] = bar
-	end
-
-	local trackBar = new("Frame", {
-		Name = "Track",
-		Position = UDim2.fromOffset(28, 142),
-		Size = UDim2.new(1, -56, 0, 10),
-		BackgroundColor3 = Color3.fromRGB(54, 40, 84),
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = trackBar })
-	track(trackBar, "BackgroundTransparency", 0)
-
-	local fill = new("Frame", {
-		Name = "Fill",
-		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0,
-		ZIndex = 9,
-		Parent = trackBar,
-	})
-	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = fill })
-	new("UIGradient", { Color = ColorSequence.new(MAGENTA, CYAN), Parent = fill })
-	track(fill, "BackgroundTransparency", 0)
-
-	local percent = label({
-		Name = "Percent",
-		Position = UDim2.fromOffset(28, 162),
-		Size = UDim2.new(0.5, -28, 0, 20),
-		TextSize = 15,
-		Text = "00%",
-		Parent = card,
-	}, "mono")
-
-	local clock = label({
-		Name = "Clock",
-		Position = UDim2.new(0.5, 0, 0, 162),
-		Size = UDim2.new(0.5, -28, 0, 20),
-		TextSize = 15,
-		TextColor3 = MUTED,
-		TextXAlignment = Enum.TextXAlignment.Right,
-		Text = string.format("00:%02d", HOLD),
-		Parent = card,
-	}, "mono")
-
-	local rule = new("Frame", {
-		Position = UDim2.fromOffset(28, 196),
-		Size = UDim2.new(1, -56, 0, 1),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-	track(rule, "BackgroundTransparency", 0.82)
-
-	local profile = new("Frame", {
-		Name = "Profile",
-		Position = UDim2.fromOffset(20, 214),
-		Size = UDim2.new(1, -40, 0, 122),
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		BorderSizePixel = 0,
-		ZIndex = 8,
-		Parent = card,
-	})
-	new("UICorner", { CornerRadius = UDim.new(0, 12), Parent = profile })
-	track(profile, "BackgroundTransparency", 0.94)
-
-	local avatar = new("ImageLabel", {
-		Name = "Avatar",
-		Position = UDim2.fromOffset(20, 22),
-		Size = UDim2.fromOffset(78, 78),
-		BackgroundColor3 = Color3.fromRGB(20, 12, 32),
-		BorderSizePixel = 0,
-		Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=420&h=420", player.UserId),
-		ScaleType = Enum.ScaleType.Crop,
-		ResampleMode = Enum.ResamplerMode.Default,
-		ZIndex = 9,
-		Parent = profile,
-	})
-	new("UICorner", { CornerRadius = UDim.new(1, 0), Parent = avatar })
-	track(avatar, "ImageTransparency", 0)
-	local avatarStroke = new("UIStroke", {
-		Thickness = 2,
-		Color = CYAN,
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Parent = avatar,
-	})
-	track(avatarStroke, "Transparency", 0)
-
-	local displayName = player.DisplayName
-	if displayName == "" then
-		displayName = player.Name
-	end
-
-	label({
-		Position = UDim2.fromOffset(116, 24),
-		Size = UDim2.new(1, -136, 0, 16),
-		TextSize = 13,
-		TextColor3 = MAGENTA,
-		Text = "OPERATOR",
-		Parent = profile,
-	}, "mono")
-	label({
-		Position = UDim2.fromOffset(116, 44),
-		Size = UDim2.new(1, -136, 0, 28),
-		TextSize = 24,
-		Text = displayName,
-		Parent = profile,
-	}, "bold")
-	label({
-		Position = UDim2.fromOffset(116, 76),
-		Size = UDim2.new(1, -136, 0, 20),
-		TextSize = 15,
-		TextColor3 = CYAN,
-		Text = "@" .. player.Name,
-		Parent = profile,
-	}, "mono")
-
-	local phases = {
-		{ 0.00, "INITIALIZING LOADER" },
-		{ 0.16, "SYNCING OPERATOR" },
-		{ 0.38, "CHARGING NEON CORE" },
-		{ 0.58, "DECRYPTING MODULES" },
-		{ 0.78, "LOCKING SIGNAL" },
-		{ 0.94, "VESPERHUB ONLINE" },
-	}
-
-	local progress = new("NumberValue", {
-		Name = "Progress",
-		Value = 0,
-		Parent = gui,
-	})
-	progress.Changed:Connect(function(value)
-		if fill.Parent == nil then
-			return
-		end
-		local alpha = math.clamp(value, 0, 1)
-		fill.Size = UDim2.fromScale(alpha, 1)
-		percent.Text = string.format("%02d%%", math.floor(alpha * 100 + 0.5))
-		local line = phases[1][2]
-		for _, phase in phases do
-			if alpha >= phase[1] then
-				line = phase[2]
-			end
-		end
-		status.Text = line
+local function applyFace(label, weight)
+	local ok = pcall(function()
+		label.FontFace = Font.new(
+			"rbxasset://fonts/families/GothamSSm.json",
+			weight,
+			Enum.FontStyle.Normal
+		)
 	end)
-
-	local reveal = new("NumberValue", {
-		Name = "Reveal",
-		Value = 0,
-		Parent = gui,
-	})
-	applyFade(0)
-	reveal.Changed:Connect(applyFade)
-
-	local started = os.clock()
-	TweenService:Create(reveal, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Value = 1,
-	}):Play()
-	TweenService:Create(card, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-	}):Play()
-	TweenService:Create(progress, TweenInfo.new(HOLD, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Value = 1,
-	}):Play()
-
-	local function guard(fn)
-		task.spawn(function()
-			local ok, err = pcall(fn)
-			if not ok then
-				warn("[ScriptLoader] " .. tostring(err))
-			end
-		end)
+	if not ok then
+		label.Font = Enum.Font.GothamBold
 	end
+end
 
-	guard(function()
-		while still() do
-			local left = math.max(0, HOLD - (os.clock() - started))
-			clock.Text = string.format("%02d:%02d", math.floor(left / 60), math.floor(left % 60))
-			task.wait(0.1)
+local function corner(px, py, ax, ay)
+	local col = Color3.fromRGB(176, 176, 176)
+	local function bar()
+		local f = Instance.new("Frame")
+		f.BackgroundColor3 = col
+		f.BackgroundTransparency = 1
+		f.BorderSizePixel = 0
+		f.AnchorPoint = Vector2.new(ax, ay)
+		f.Position = UDim2.fromScale(px, py)
+		f.Parent = root
+		return f
+	end
+	local h = bar()
+	local v = bar()
+	return h, v
+end
+
+local brackets = {
+	{ corner(0.055, 0.09, 0, 0) },
+	{ corner(0.945, 0.09, 1, 0) },
+	{ corner(0.055, 0.91, 0, 1) },
+	{ corner(0.945, 0.91, 1, 1) },
+}
+
+local logoHolder = Instance.new("Frame")
+logoHolder.Name = "Logo"
+logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+logoHolder.Position = UDim2.fromScale(0.5, 0.40)
+logoHolder.BackgroundTransparency = 1
+logoHolder.ClipsDescendants = true
+logoHolder.Parent = root
+
+local aspect = Instance.new("UIAspectRatioConstraint")
+aspect.AspectRatio = 217 / 76
+aspect.DominantAxis = Enum.DominantAxis.Width
+aspect.Parent = logoHolder
+
+local asset = ""
+local wrote = pcall(function()
+	writefile("duality_logo.png", crypt.base64decode(B64))
+	asset = getcustomasset("duality_logo.png")
+end)
+
+local glow = Instance.new("ImageLabel")
+glow.Name = "Glow"
+glow.BackgroundTransparency = 1
+glow.AnchorPoint = Vector2.new(0.5, 0.5)
+glow.Position = UDim2.fromScale(0.5, 0.5)
+glow.Size = UDim2.fromScale(1.18, 1.18)
+glow.ScaleType = Enum.ScaleType.Fit
+glow.Image = asset
+glow.ImageTransparency = 1
+glow.ZIndex = 1
+glow.Parent = logoHolder
+
+local logo = Instance.new("ImageLabel")
+logo.Name = "Mark"
+logo.BackgroundTransparency = 1
+logo.AnchorPoint = Vector2.new(0.5, 0.5)
+logo.Position = UDim2.fromScale(0.5, 0.5)
+logo.Size = UDim2.fromScale(1, 1)
+logo.ScaleType = Enum.ScaleType.Fit
+logo.Image = asset
+logo.ImageTransparency = 1
+logo.ZIndex = 2
+logo.Parent = logoHolder
+
+local sheen = Instance.new("Frame")
+sheen.AnchorPoint = Vector2.new(0.5, 0.5)
+sheen.Position = UDim2.fromScale(-0.4, 0.5)
+sheen.Size = UDim2.fromScale(0.16, 1.6)
+sheen.BackgroundColor3 = Color3.new(1, 1, 1)
+sheen.BackgroundTransparency = 0.45
+sheen.BorderSizePixel = 0
+sheen.Rotation = 16
+sheen.ZIndex = 3
+sheen.Parent = logoHolder
+local sheenGrad = Instance.new("UIGradient")
+sheenGrad.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.5, 0.15),
+	NumberSequenceKeypoint.new(1, 1),
+})
+sheenGrad.Parent = sheen
+
+local function makeLine(x, anchorX)
+	local line = Instance.new("Frame")
+	line.AnchorPoint = Vector2.new(anchorX, 0.5)
+	line.Position = UDim2.fromScale(x, 0.545)
+	line.Size = UDim2.fromOffset(0, 1)
+	line.BackgroundColor3 = Color3.fromRGB(214, 214, 214)
+	line.BackgroundTransparency = 0.2
+	line.BorderSizePixel = 0
+	line.Parent = root
+	return line
+end
+
+local leftLine = makeLine(0.458, 1)
+local rightLine = makeLine(0.542, 0)
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.AnchorPoint = Vector2.new(0.5, 0)
+title.Position = UDim2.fromScale(0.5, 0.575)
+title.Size = UDim2.new(0.7, 0, 0, 56)
+title.BackgroundTransparency = 1
+title.Text = ""
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.TextYAlignment = Enum.TextYAlignment.Center
+title.Parent = root
+applyFace(title, Enum.FontWeight.Heavy)
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.AnchorPoint = Vector2.new(0.5, 0)
+subtitle.Position = UDim2.fromScale(0.5, 0.655)
+subtitle.Size = UDim2.new(0.7, 0, 0, 22)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = SUB
+subtitle.TextColor3 = Color3.fromRGB(188, 188, 188)
+subtitle.TextTransparency = 1
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.Parent = root
+applyFace(subtitle, Enum.FontWeight.Medium)
+
+local track = Instance.new("Frame")
+track.Name = "Bar"
+track.AnchorPoint = Vector2.new(0.5, 0)
+track.Position = UDim2.fromScale(0.5, 0.715)
+track.BackgroundColor3 = Color3.fromRGB(58, 58, 58)
+track.BackgroundTransparency = 1
+track.BorderSizePixel = 0
+track.Parent = root
+
+local fill = Instance.new("Frame")
+fill.Name = "Fill"
+fill.Size = UDim2.fromScale(0, 1)
+fill.BackgroundColor3 = Color3.new(1, 1, 1)
+fill.BackgroundTransparency = 1
+fill.BorderSizePixel = 0
+fill.Parent = track
+
+local percent = Instance.new("TextLabel")
+percent.Name = "Percent"
+percent.AnchorPoint = Vector2.new(0.5, 0)
+percent.Position = UDim2.new(0.5, 0, 1, 8)
+percent.Size = UDim2.fromOffset(80, 16)
+percent.BackgroundTransparency = 1
+percent.Text = "0%"
+percent.TextColor3 = Color3.fromRGB(150, 150, 150)
+percent.TextTransparency = 1
+percent.Parent = track
+applyFace(percent, Enum.FontWeight.Regular)
+
+local function layout()
+	local cam = workspace.CurrentCamera
+	local vs = cam and cam.ViewportSize or Vector2.new(1280, 720)
+	local arm = math.clamp(math.floor(vs.Y * 0.028), 16, 34)
+	local thick = math.max(1, math.floor(vs.Y * 0.0016))
+	for _, pair in ipairs(brackets) do
+		pair[1].Size = UDim2.fromOffset(arm, thick)
+		pair[2].Size = UDim2.fromOffset(thick, arm)
+	end
+	logoHolder.Size = UDim2.fromOffset(math.clamp(math.floor(vs.X * 0.24), 220, 460), 80)
+	title.TextSize = math.clamp(math.floor(vs.Y * 0.052), 30, 56)
+	title.Size = UDim2.new(0.7, 0, 0, math.floor(title.TextSize * 1.25))
+	subtitle.TextSize = math.clamp(math.floor(vs.Y * 0.0165), 11, 16)
+	subtitle.Position = UDim2.new(0.5, 0, 0.575, math.floor(title.TextSize * 1.15))
+	percent.TextSize = math.clamp(math.floor(vs.Y * 0.015), 10, 14)
+	local barW = math.clamp(math.floor(vs.X * 0.145), 168, 300)
+	local barH = math.max(2, math.floor(vs.Y * 0.0035))
+	track.Size = UDim2.fromOffset(barW, barH)
+	local lineW = math.clamp(math.floor(vs.X * 0.105), 70, 180)
+	leftLine:SetAttribute("TargetW", lineW)
+	rightLine:SetAttribute("TargetW", lineW)
+end
+
+layout()
+local cam = workspace.CurrentCamera
+if cam and typeof(STATE) == "table" and typeof(STATE.connect) == "function" then
+	STATE.connect(cam:GetPropertyChangedSignal("ViewportSize"), layout)
+end
+
+local started = os.clock()
+local dismissed = false
+local linesShown = false
+
+local function fadeBrackets(info, value)
+	for _, pair in ipairs(brackets) do
+		TweenService:Create(pair[1], info, { BackgroundTransparency = value }):Play()
+		TweenService:Create(pair[2], info, { BackgroundTransparency = value }):Play()
+	end
+end
+
+local function dismiss()
+	if dismissed or not alive() then
+		return
+	end
+	dismissed = true
+	local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(root, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(logo, info, { ImageTransparency = 1 }):Play()
+	TweenService:Create(glow, info, { ImageTransparency = 1 }):Play()
+	TweenService:Create(sheen, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(leftLine, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(rightLine, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(title, info, { TextTransparency = 1 }):Play()
+	TweenService:Create(subtitle, info, { TextTransparency = 1 }):Play()
+	TweenService:Create(track, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(fill, info, { BackgroundTransparency = 1 }):Play()
+	TweenService:Create(percent, info, { TextTransparency = 1 }):Play()
+	fadeBrackets(info, 1)
+	task.delay(0.75, function()
+		if gui.Parent then
+			gui:Destroy()
 		end
 	end)
+end
 
-	guard(function()
-		while still() do
-			for _, bar in bars do
-				if bar.Parent then
-					TweenService:Create(bar, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						Size = UDim2.fromOffset(8, math.random(8, 30)),
-					}):Play()
-				end
-			end
-			task.wait(0.28)
+local intro = TweenInfo.new(0.85, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+TweenService:Create(logo, intro, { ImageTransparency = 0 }):Play()
+TweenService:Create(glow, intro, { ImageTransparency = 0.62 }):Play()
+fadeBrackets(TweenInfo.new(0.7), 0.28)
+
+task.spawn(function()
+	while alive() and not dismissed do
+		local t = os.clock() - started
+		if t > 0.85 and not linesShown then
+			linesShown = true
+			local w = leftLine:GetAttribute("TargetW") or 120
+			local grow = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			TweenService:Create(leftLine, grow, { Size = UDim2.fromOffset(w, 1) }):Play()
+			TweenService:Create(rightLine, grow, { Size = UDim2.fromOffset(w, 1) }):Play()
 		end
-	end)
-
-	guard(function()
-		while still() do
-			scan.Position = UDim2.fromScale(0, -0.2)
-			local sweep = TweenService:Create(scan, TweenInfo.new(2.8, Enum.EasingStyle.Linear), {
-				Position = UDim2.fromScale(0, 1.05),
-			})
-			sweep:Play()
-			sweep.Completed:Wait()
+		if t >= 1.15 and title.Text ~= WORD then
+			local n = math.clamp(math.floor((t - 1.15) / 0.12) + 1, 1, #WORD)
+			title.Text = string.sub(WORD, 1, n)
 		end
-	end)
-
-	task.delay(math.max(0.2, HOLD - FADE), function()
-		if not still() then
-			return
+		if t >= 2.15 and subtitle.TextTransparency > 0.05 then
+			TweenService:Create(subtitle, TweenInfo.new(0.4), { TextTransparency = 0.05 }):Play()
+			TweenService:Create(track, TweenInfo.new(0.35), { BackgroundTransparency = 0 }):Play()
+			TweenService:Create(fill, TweenInfo.new(0.35), { BackgroundTransparency = 0 }):Play()
+			TweenService:Create(percent, TweenInfo.new(0.35), { TextTransparency = 0.1 }):Play()
 		end
-		closing = true
-		local out = TweenService:Create(reveal, TweenInfo.new(FADE, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Value = 0,
-		})
-		out.Completed:Connect(function()
-			if gui.Parent then
-				gui:Destroy()
-			end
-		end)
-		out:Play()
-	end)
-end, debug.traceback)
-
-if not built then
-	warn("[ScriptLoader] " .. tostring(buildErr))
-	if gui.Parent then
-		gui:Destroy()
+		local p = math.clamp(t / DURATION, 0, 1)
+		local eased = p * p * (3 - 2 * p)
+		fill.Size = UDim2.fromScale(eased, 1)
+		percent.Text = string.format("%d%%", math.floor(eased * 100 + 0.5))
+		if t >= DURATION then
+			dismiss()
+			break
+		end
+		task.wait(0.03)
 	end
+end)
+
+task.spawn(function()
+	task.wait(0.35)
+	while alive() and not dismissed and (os.clock() - started) < 9 do
+		sheen.Position = UDim2.fromScale(-0.45, 0.5)
+		local tw = TweenService:Create(
+			sheen,
+			TweenInfo.new(1.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Position = UDim2.fromScale(1.45, 0.5) }
+		)
+		tw:Play()
+		tw.Completed:Wait()
+		task.wait(1.6)
+	end
+	if alive() then
+		sheen.BackgroundTransparency = 1
+	end
+end)
+
+if not wrote or asset == "" then
+	warn("[DualityLoading] logo image failed to load")
 end
